@@ -19,12 +19,16 @@ fun main() {
         return gamma * epsilon
     }
 
-    fun recursivelyFilterForCharAtIndex(list: List<String>, index: Int = 0, filter: (List<String>, Int) -> Char): String {
-        return if (list.size == 1) {
+    tailrec fun recursivelyFilterForCharAtIndex(
+        list: List<String>,
+        index: Int = 0,
+        charSelector: (List<String>, Int) -> Char
+    ): String {
+        return if (list.size == 1)
             list[0]
-        } else {
-            recursivelyFilterForCharAtIndex(list.filter { it[index] == filter(list, index) }, index + 1, filter)
-        }
+        else
+            recursivelyFilterForCharAtIndex(list.filter { it[index] == charSelector(list, index) }, index + 1, charSelector)
+
     }
 
     fun oxygenRating(input: List<String>): Int {
@@ -59,18 +63,20 @@ fun main() {
 
 private fun List<String>.mostCommonCharAtIndex(index: Int, default: Char): Char {
     return map { it[index] }
-        .groupBy { it }
+        .groupingBy { it }
+        .eachCount()
         .maxWithOrNull(
-            Comparator.comparing<Map.Entry<Char, List<Char>>?, Int?> { (_, value) -> value.size }
+            Comparator.comparing<Map.Entry<Char, Int>?, Int?> { it.value }
                 .thenComparing { (key, _) -> key == default }
         )?.key ?: default
 }
 
 private fun List<String>.leastCommonCharAtIndex(index: Int, default: Char): Char {
     return map { it[index] }
-        .groupBy { it }
+        .groupingBy { it }
+        .eachCount()
         .minWithOrNull(
-            Comparator.comparing<Map.Entry<Char, List<Char>>?, Int?> { (_, value) -> value.size }
+            Comparator.comparing<Map.Entry<Char, Int>?, Int?> { it.value }
                 .thenComparing { (key, _) -> key != default }
         )?.key ?: default
 }
