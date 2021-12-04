@@ -46,7 +46,9 @@ class BingoCard(private val rows: List<List<Cell>>) {
     data class Cell(val number: Int, var checked: Boolean = false)
 
     fun mark(number: Int) {
-        rows.flatten().filter { it.number == number }.forEach { it.checked = true }
+        rows.flatten()
+            .filter { it.number == number }
+            .forEach { it.checked = true }
     }
 
     fun hasWon() = anyRowCompleted() || anyColumnCompleted()
@@ -62,5 +64,10 @@ class BingoCard(private val rows: List<List<Cell>>) {
 }
 
 fun List<String>.toBingoCard(): BingoCard {
-    return BingoCard(map { line -> line.trim().split("\\s+".toRegex()).map { BingoCard.Cell(it.toInt()) } })
+    val rows = map { line ->
+        line.trim()
+            .split("\\s+".toRegex())
+            .map { BingoCard.Cell(it.toInt()) }
+    }
+    return BingoCard(rows)
 }
