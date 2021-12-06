@@ -41,29 +41,29 @@ fun main() {
     println(part2(input))
 }
 
-class BingoCard(private val rows: List<List<Cell>>) {
+private class BingoCard(private val rows: List<List<Cell>>) {
 
-    data class Cell(val number: Int, var checked: Boolean = false)
+    data class Cell(val number: Int, var marked: Boolean = false)
 
     fun mark(number: Int) {
         rows.flatten()
             .filter { it.number == number }
-            .forEach { it.checked = true }
+            .forEach { it.marked = true }
     }
 
     fun hasWon() = anyRowCompleted() || anyColumnCompleted()
 
-    private fun anyRowCompleted() = rows.any { row -> row.all { it.checked } }
+    private fun anyRowCompleted() = rows.any { row -> row.all { it.marked } }
 
     private fun anyColumnCompleted(): Boolean {
         val columns = rows.first().mapIndexed { index, _ -> rows.map { it[index] } }
-        return columns.any { column -> column.all { it.checked } }
+        return columns.any { column -> column.all { it.marked } }
     }
 
-    fun sumOfUnchecked() = rows.flatten().filterNot { it.checked }.sumOf { it.number }
+    fun sumOfUnchecked() = rows.flatten().filterNot { it.marked }.sumOf { it.number }
 }
 
-fun List<String>.toBingoCard(): BingoCard {
+private fun List<String>.toBingoCard(): BingoCard {
     val rows = map { line ->
         line.trim()
             .split("\\s+".toRegex())

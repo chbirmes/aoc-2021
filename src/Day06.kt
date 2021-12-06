@@ -1,17 +1,15 @@
 fun main() {
 
     fun part1(input: List<String>): Long {
-        val school = LanternfishSchool()
-        input.first().split(",")
-            .forEach { school.addFish(1, it.toInt()) }
+        val initialTimers = input.first().split(",").map { it.toInt() }
+        val school = LanternfishSchool(initialTimers)
         repeat(80) { school.tick() }
         return school.size()
     }
 
     fun part2(input: List<String>): Long {
-        val school = LanternfishSchool()
-        input.first().split(",")
-            .forEach { school.addFish(1, it.toInt()) }
+        val initialTimers = input.first().split(",").map { it.toInt() }
+        val school = LanternfishSchool(initialTimers)
         repeat(256) { school.tick() }
         return school.size()
     }
@@ -27,14 +25,18 @@ fun main() {
 }
 
 
-class LanternfishSchool {
+private class LanternfishSchool(initialTimers: List<Int>) {
+
+    private val buckets: MutableList<Bucket> = mutableListOf()
+
+    init {
+        initialTimers.forEach { addFish(timer = it) }
+    }
 
     data class Bucket(var timer: Int, var size: Long)
 
-    private val buckets: MutableList<Bucket> = mutableListOf()
-    private var spawnCount: Long = 0
-
     fun tick() {
+        var spawnCount: Long = 0
         buckets.forEach {
             if (it.timer > 0) {
                 it.timer--
@@ -47,7 +49,7 @@ class LanternfishSchool {
         spawnCount = 0
     }
 
-    fun addFish(count: Long, timer: Int) {
+    private fun addFish(count: Long = 1, timer: Int) {
         buckets.find { it.timer == timer }
             ?.let { it.size += count }
             ?: buckets.add(Bucket(timer, count))

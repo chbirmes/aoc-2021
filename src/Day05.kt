@@ -1,4 +1,6 @@
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 fun main() {
 
@@ -12,22 +14,17 @@ fun main() {
     }
 
     fun part1(input: List<String>): Int {
-        val lines = input.toLines()
+        val lines = input
+            .map { Line(it) }
             .filter { it.isHorizontal() || it.isVertical() }
         val grid = gridContaining(lines)
-        return grid
-            .count { (x, y) ->
-                lines.count { it.covers(x, y) } >= 2
-            }
+        return grid.count { it.countCovering(lines) >=2 }
     }
 
     fun part2(input: List<String>): Int {
-        val lines = input.toLines()
+        val lines = input.map { Line(it) }
         val grid = gridContaining(lines)
-        return grid
-            .count { (x, y) ->
-                lines.count { it.covers(x, y) } >= 2
-            }
+        return grid.count { it.countCovering(lines) >=2 }
     }
 
     // test if implementation meets criteria from the description, like:
@@ -40,10 +37,10 @@ fun main() {
     println(part2(input))
 }
 
-class Line(private val x1: Int, private val y1: Int, private val x2: Int, private val y2: Int) {
+private class Line(private val x1: Int, private val y1: Int, private val x2: Int, private val y2: Int) {
 
-    val xRange: IntRange = if (x2 < x1) x2..x1 else x1..x2
-    val yRange: IntRange = if (y2 < y1) y2..y1 else y1..y2
+    val xRange: IntRange = min(x1, x2)..max(x1, x2)
+    val yRange: IntRange = min(y1, y2)..max(y1, y2)
 
     fun isHorizontal() = y1 == y2
 
@@ -56,12 +53,8 @@ class Line(private val x1: Int, private val y1: Int, private val x2: Int, privat
     }
 }
 
-private fun Iterable<String>.toLines(): List<Line> {
-    return map { line ->
-        line.split(",", " -> ")
-            .map { it.toInt() }
-    }
-        .map {
-            Line(it[0], it[1], it[2], it[3])
-        }
-}
+private fun Line(string: String) = string.split(",", " -> ")
+    .map { it.toInt() }
+    .let { Line(it[0], it[1], it[2], it[3]) }
+
+private fun Pair<Int, Int>.countCovering(lines: Iterable<Line>) = lines.count { it.covers(first, second) }
