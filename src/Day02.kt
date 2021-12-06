@@ -3,30 +3,29 @@ fun main() {
     data class Command(val direction: String, val units: Int)
 
     data class Position(val horizontal: Int, val depth: Int) {
+
         fun executeCommand(command: Command) =
-            when (command.direction.lowercase()) {
+            when (command.direction) {
                 "forward" -> copy(horizontal = horizontal + command.units)
                 "down" -> copy(depth = depth + command.units)
                 "up" -> copy(depth = depth - command.units)
                 else -> this
             }
+
     }
 
-    fun Iterable<String>.toCommands() =
-        map { it.split(' ', limit = 2) }
-            .filter { it.size >= 2 }
-            .filter { it[1].toIntOrNull() != null }
-            .map { Command(it[0], it[1].toInt()) }
+    fun Command(string: String) = string.split(' ', limit = 2).let { Command(it[0], it[1].toInt()) }
 
     fun part1(input: List<String>) = input
-        .toCommands()
+        .map { Command(it) }
         .fold(Position(0, 0), Position::executeCommand)
         .let { it.horizontal * it.depth }
 
 
     data class PositionWithAim(val horizontal: Int, val depth: Int, val aim: Int) {
+
         fun executeCommand(command: Command) =
-            when (command.direction.lowercase()) {
+            when (command.direction) {
                 "forward" -> copy(
                     horizontal = horizontal + command.units,
                     depth = depth + aim * command.units
@@ -35,10 +34,11 @@ fun main() {
                 "up" -> copy(aim = aim - command.units)
                 else -> this
             }
+
     }
 
     fun part2(input: List<String>) = input
-        .toCommands()
+        .map { Command(it) }
         .fold(PositionWithAim(0, 0, 0), PositionWithAim::executeCommand)
         .let { it.horizontal * it.depth }
 

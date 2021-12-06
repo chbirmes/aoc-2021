@@ -1,5 +1,3 @@
-import java.util.Comparator
-
 fun main() {
 
     fun gamma(input: List<String>): Int {
@@ -60,26 +58,27 @@ fun main() {
     println(part2(input))
 }
 
-private fun List<String>.mostCommonCharAt(index: Int, bias: Char = ' '): Char {
-    return map { it[index] }
-        .groupingBy { it }
-        .eachCount()
-        .maxWithOrNull(
-            Comparator.comparing<Map.Entry<Char, Int>?, Int?> { it.value }
-                .thenComparing { (key, _) -> key == bias }
-        )
-        ?.key
-        ?: bias
+private fun List<String>.mostCommonCharAt(index: Int, bias: Char): Char {
+    return mostCommonCharAt(index) { bias }
+}
+
+private fun List<String>.mostCommonCharAt(
+    index: Int,
+    bias: () -> Char = { throw IllegalArgumentException("unique maximum required") }
+): Char {
+    val charCounts = charCounts(index)
+    val maxCount = charCounts.maxOf { it.value }
+    return charCounts.filter { it.value == maxCount }
+        .let { if (it.size == 1) it.entries.first().key else bias() }
 }
 
 private fun List<String>.leastCommonCharAt(index: Int, bias: Char): Char {
-    return map { it[index] }
-        .groupingBy { it }
-        .eachCount()
-        .minWithOrNull(
-            Comparator.comparing<Map.Entry<Char, Int>?, Int?> { it.value }
-                .thenComparing { (key, _) -> key != bias }
-        )
-        ?.key
-        ?: bias
+    val charCounts = charCounts(index)
+    val minCount = charCounts.minOf { it.value }
+    return charCounts.filter { it.value == minCount }
+        .let { if (it.size == 1) it.entries.first().key else bias }
 }
+
+private fun List<String>.charCounts(index: Int) = map { it[index] }
+    .groupingBy { it }
+    .eachCount()

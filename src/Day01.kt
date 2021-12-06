@@ -1,4 +1,5 @@
 fun main() {
+
     fun Iterable<Int>.countIncrements() = windowed(2).count { it[1] > it[0] }
 
     fun part1(input: List<String>): Int {

@@ -12,7 +12,7 @@ fun main() {
         draws.forEach { draw ->
             bingoCards.forEach { it.mark(draw) }
             val winner = bingoCards.find { it.hasWon() }
-            winner?.let { return it.sumOfUnchecked() * draw }
+            winner?.let { return it.sumOfUnmarked() * draw }
         }
         throw IllegalArgumentException("no winning card")
     }
@@ -24,7 +24,7 @@ fun main() {
         draws.forEach { draw ->
             bingoCards.forEach { it.mark(draw) }
             if (bingoCards.size == 1 && bingoCards[0].hasWon()) {
-                return bingoCards[0].sumOfUnchecked() * draw
+                return bingoCards[0].sumOfUnmarked() * draw
             }
             bingoCards.removeIf { it.hasWon() }
         }
@@ -45,6 +45,8 @@ private class BingoCard(private val rows: List<List<Cell>>) {
 
     data class Cell(val number: Int, var marked: Boolean = false)
 
+    fun List<Cell>.isCompleted() = all { it.marked }
+
     fun mark(number: Int) {
         rows.flatten()
             .filter { it.number == number }
@@ -53,14 +55,16 @@ private class BingoCard(private val rows: List<List<Cell>>) {
 
     fun hasWon() = anyRowCompleted() || anyColumnCompleted()
 
-    private fun anyRowCompleted() = rows.any { row -> row.all { it.marked } }
+    private fun anyRowCompleted() = rows.any { it.isCompleted() }
 
     private fun anyColumnCompleted(): Boolean {
-        val columns = rows.first().mapIndexed { index, _ -> rows.map { it[index] } }
-        return columns.any { column -> column.all { it.marked } }
+        val columns = rows.first()
+            .indices
+            .map { index -> rows.map { it[index] } }
+        return columns.any { it.isCompleted() }
     }
 
-    fun sumOfUnchecked() = rows.flatten().filterNot { it.marked }.sumOf { it.number }
+    fun sumOfUnmarked() = rows.flatten().filterNot { it.marked }.sumOf { it.number }
 }
 
 private fun List<String>.toBingoCard(): BingoCard {

@@ -27,13 +27,13 @@ fun main() {
 
 private class LanternfishSchool(initialTimers: List<Int>) {
 
+    data class Bucket(var timer: Int, var size: Long)
+
     private val buckets: MutableList<Bucket> = mutableListOf()
 
     init {
         initialTimers.forEach { addFish(timer = it) }
     }
-
-    data class Bucket(var timer: Int, var size: Long)
 
     fun tick() {
         var spawnCount: Long = 0
@@ -46,7 +46,6 @@ private class LanternfishSchool(initialTimers: List<Int>) {
             }
         }
         addFish(spawnCount, 8)
-        spawnCount = 0
     }
 
     private fun addFish(count: Long = 1, timer: Int) {
