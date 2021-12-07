@@ -33,12 +33,12 @@ fun main() {
     }
 
     fun oxygenRating(input: List<String>): Int {
-        return recursivelyFilterForChar(input) { list, index -> list.mostCommonCharAt(index, bias = '1') }
+        return recursivelyFilterForChar(input) { list, index -> list.mostCommonCharAt(index) ?: '1' }
             .toInt(2)
     }
 
     fun co2Rating(input: List<String>): Int {
-        return recursivelyFilterForChar(input) { list, index -> list.leastCommonCharAt(index, bias = '0') }
+        return recursivelyFilterForChar(input) { list, index -> list.leastCommonCharAt(index) ?: '0' }
             .toInt(2)
     }
 
@@ -58,27 +58,18 @@ fun main() {
     println(part2(input))
 }
 
-private fun List<String>.mostCommonCharAt(index: Int, bias: Char): Char {
-    return mostCommonCharAt(index) { bias }
+private fun List<String>.mostCommonCharAt(index: Int): Char? {
+    val charFrequencies = map { it[index] }.frequencies()
+    val maxCount = charFrequencies.maxOf { it.value }
+    return charFrequencies.filter { it.value == maxCount }
+        .let { if (it.size == 1) it.entries.first().key else null }
 }
 
-private fun List<String>.mostCommonCharAt(
-    index: Int,
-    bias: () -> Char = { throw IllegalArgumentException("unique maximum required") }
-): Char {
-    val charCounts = charCounts(index)
-    val maxCount = charCounts.maxOf { it.value }
-    return charCounts.filter { it.value == maxCount }
-        .let { if (it.size == 1) it.entries.first().key else bias() }
+private fun List<String>.leastCommonCharAt(index: Int): Char? {
+    val charFrequencies = map { it[index] }.frequencies()
+    val minCount = charFrequencies.minOf { it.value }
+    return charFrequencies.filter { it.value == minCount }
+        .let { if (it.size == 1) it.entries.first().key else null }
 }
 
-private fun List<String>.leastCommonCharAt(index: Int, bias: Char): Char {
-    val charCounts = charCounts(index)
-    val minCount = charCounts.minOf { it.value }
-    return charCounts.filter { it.value == minCount }
-        .let { if (it.size == 1) it.entries.first().key else bias }
-}
-
-private fun List<String>.charCounts(index: Int) = map { it[index] }
-    .groupingBy { it }
-    .eachCount()
+private fun Iterable<Char>.frequencies() = groupingBy { it }.eachCount()
