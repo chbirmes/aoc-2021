@@ -1,68 +1,39 @@
 fun main() {
 
-    fun part1(input: List<String>): Int {
-        return input.mapIndexed { x, row ->
-            row.mapIndexed { y, char ->
-                val current = char.digitToInt()
-                if ((x == 0 || input[x - 1][y].digitToInt() > current)
-                    && (y == 0 || input[x][y - 1].digitToInt() > current)
-                    && (x == input.size - 1 || input[x + 1][y].digitToInt() > current)
-                    && (y == row.length - 1 || input[x][y + 1].digitToInt() > current)
-                )
-                    current + 1
-                else 0
+    fun calculateLowPoints(input: List<String>) = input.mapIndexed { x, row ->
+        row.mapIndexed { y, char ->
+            val current = char.digitToInt()
+            Point(x, y).let { point ->
+                if (point.neighborsIn(input).all { it.valueIn(input) > current })
+                    point
+                else
+                    null
             }
         }
-            .flatten()
-            .sum()
     }
+        .flatten()
+        .filterNotNull()
 
-    fun Pair<Int, Int>.eligibleNeighbors(input: List<String>, reached: Set<Pair<Int, Int>>): List<Pair<Int, Int>> {
-        return listOf(
-            first - 1 to second,
-            first to second - 1,
-            first + 1 to second,
-            first to second + 1
-        ).filter { (x, y) ->
-            x in input.indices
-                    && y in input.first().indices
-                    && input[x][y].digitToInt() < 9
-                    && x to y !in reached
-        }
-    }
+    fun part1(input: List<String>) = calculateLowPoints(input).sumOf { it.valueIn(input) + 1 }
 
-    fun basinSize(start: Pair<Int, Int>, input: List<String>, reached: MutableSet<Pair<Int, Int>>): Int {
-        val neighbors = start.eligibleNeighbors(input, reached)
-        reached.addAll(neighbors)
-        return if (neighbors.isEmpty()) {
+    fun Point.basinNeighbors(input: List<String>, reached: Set<Point>) =
+        neighborsIn(input).filter { it.valueIn(input) < 9 && it !in reached }
+
+    fun basinSize(start: Point, input: List<String>, reached: MutableSet<Point>): Int {
+        val neighbors = start.basinNeighbors(input, reached)
+            .also { reached.addAll(it) }
+        return if (neighbors.isEmpty())
             1
-        } else {
+        else
             1 + neighbors.sumOf { basinSize(it, input, reached) }
-        }
+
     }
 
-    fun part2(input: List<String>): Int {
-        val lowPoints = input.mapIndexed { x, row ->
-            row.mapIndexed { y, char ->
-                val current = char.digitToInt()
-                if ((x == 0 || input[x - 1][y].digitToInt() > current)
-                    && (y == 0 || input[x][y - 1].digitToInt() > current)
-                    && (x == input.size - 1 || input[x + 1][y].digitToInt() > current)
-                    && (y == row.length - 1 || input[x][y + 1].digitToInt() > current)
-                )
-                    x to y
-                else null
-            }
-        }
-            .flatten()
-            .filterNotNull()
-
-        return lowPoints
-            .map { basinSize(it, input, mutableSetOf(it)) }
-            .sortedDescending()
-            .take(3)
-            .reduce { x, y -> x * y }
-    }
+    fun part2(input: List<String>) = calculateLowPoints(input)
+        .map { basinSize(it, input, mutableSetOf(it)) }
+        .sortedDescending()
+        .take(3)
+        .reduce { x, y -> x * y }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day09_test")
@@ -72,4 +43,19 @@ fun main() {
     val input = readInput("Day09")
     println(part1(input))
     println(part2(input))
+}
+
+private typealias Point = Pair<Int, Int>
+
+private fun Point.isInBounds(input: List<String>) = first in input.indices && second in input.first().indices
+
+private fun Point.valueIn(input: List<String>) = input[first][second].digitToInt()
+
+private fun Point.neighborsIn(input: List<String>): List<Point> {
+    return listOf(
+        first - 1 to second,
+        first to second - 1,
+        first + 1 to second,
+        first to second + 1
+    ).filter { it.isInBounds(input) }
 }
