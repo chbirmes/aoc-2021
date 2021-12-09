@@ -61,15 +61,13 @@ fun main() {
 private fun List<String>.mostCommonCharAt(index: Int): Char? {
     val charFrequencies = map { it[index] }.frequencies()
     val maxCount = charFrequencies.maxOf { it.value }
-    return charFrequencies.filter { it.value == maxCount }
-        .let { if (it.size == 1) it.entries.first().key else null }
+    return charFrequencies.entries.singleOrNull { it.value == maxCount }?.key
 }
 
 private fun List<String>.leastCommonCharAt(index: Int): Char? {
     val charFrequencies = map { it[index] }.frequencies()
     val minCount = charFrequencies.minOf { it.value }
-    return charFrequencies.filter { it.value == minCount }
-        .let { if (it.size == 1) it.entries.first().key else null }
+    return charFrequencies.entries.singleOrNull { it.value == minCount }?.key
 }
 
 private fun Iterable<Char>.frequencies() = groupingBy { it }.eachCount()

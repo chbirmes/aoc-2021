@@ -11,8 +11,7 @@ fun main() {
         val bingoCards = bingoCardsFromInput(input)
         draws.forEach { draw ->
             bingoCards.forEach { it.mark(draw) }
-            val winner = bingoCards.find { it.hasWon() }
-            winner?.let { return it.sumOfUnmarked() * draw }
+            bingoCards.find { it.hasWon() }?.let { return it.sumOfUnmarked() * draw }
         }
         throw IllegalArgumentException("no winning card")
     }
@@ -23,9 +22,7 @@ fun main() {
             .toMutableList()
         draws.forEach { draw ->
             bingoCards.forEach { it.mark(draw) }
-            if (bingoCards.size == 1 && bingoCards[0].hasWon()) {
-                return bingoCards[0].sumOfUnmarked() * draw
-            }
+            bingoCards.singleOrNull()?.let { return it.sumOfUnmarked() * draw }
             bingoCards.removeIf { it.hasWon() }
         }
         throw IllegalArgumentException("not all cards win")
