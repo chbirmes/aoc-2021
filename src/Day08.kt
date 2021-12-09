@@ -6,69 +6,42 @@ fun main() {
         return pairs.sumOf { it.second.count { code -> code.length in setOf(2, 4, 3, 7) } }
     }
 
-    val alphabet = "abcdefg"
-    val digitCodes = listOf("abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg")
+    fun part2b(input: List<String>) = input
+        .map { it.split(" | ") }
+        .map { it[0].split(" ") to it[1].split(" ") }
+        .sumOf { (allDigits, wantedDigits) ->
+            val unmapped = allDigits.map { it.toSet() }.toMutableSet()
+            val mapping = mutableMapOf<Char, Set<Char>>()
 
-    fun decode(encodedDigits: List<String>, segmentTranslation: Map<Char, Char>): Int {
-        val translated = encodedDigits.map { digit ->
-            digit.map { segmentTranslation[it]!! }
-                .sorted()
+            fun Set<Char>.mapTo(digit: Char) {
+                mapping[digit] = this
+                unmapped.remove(this)
+            }
+
+            unmapped.single { it.size == 2 }.mapTo('1')
+            unmapped.single { it.size == 3 }.mapTo('7')
+            unmapped.single { it.size == 4 }.mapTo('4')
+            unmapped.single { it.size == 7 }.mapTo('8')
+            unmapped.single { it.size == 6 && it.containsAll(mapping['4']!!) }.mapTo('9')
+            unmapped.single { it.size == 6 && it.containsAll(mapping['1']!!) }.mapTo('0')
+            unmapped.single { it.size == 6 }.mapTo('6')
+            unmapped.single { it.containsAll(mapping['1']!!) }.mapTo('3')
+            unmapped.single { mapping['6']!!.containsAll(it) }.mapTo('5')
+            unmapped.single().mapTo('2')
+
+            val reverseMapping = mapping.entries.associate { (code, digit) -> digit to code }
+            wantedDigits.map { reverseMapping[it.toSet()] }
                 .joinToString(separator = "")
-        }
-        return translated.joinToString(separator = "") { digitCodes.indexOf(it).toString() }
-            .toInt()
-    }
+                .toInt()
 
-    // find possible ENCODED segments for a DECODED segment parameter
-    fun calculateSegmentCandidates(segment: Char, digitCandidates: List<List<String>>): String {
-        val digitCodeMap = digitCodes.mapIndexed { index, s -> index to s }
-        val segmentContainingDigits = digitCodeMap
-            .filter { it.second.contains(segment) }
-            .map { it.first }
-        // an ENCODED segment must occur in at least one candidate for each digit that the DECODED segment occurs in
-        // also, it must NOT occur in at least one candidate for each digit that the DECODED segment does NOT occur in
-        val containingCandidates = digitCandidates.filterIndexed { index, _ -> index in segmentContainingDigits }
-        val notContainingCandidates = digitCandidates.filterIndexed { index, _ -> index !in segmentContainingDigits }
-        return alphabet.filter { char ->
-            containingCandidates.all { candidates ->
-                candidates.any { it.contains(char) }
-            } && notContainingCandidates.all { candidates ->
-                candidates.any { !it.contains(char) }
-            }
         }
-    }
-
-    fun calculateSegmentTranslation(cues: List<String>): Map<Char, Char> {
-        val digitCandidates = digitCodes.map { code -> cues.filter { it.length == code.length } }
-        var segmentCandidates = alphabet.map { it to calculateSegmentCandidates(it, digitCandidates) }
-        while (!segmentCandidates.all { it.second.length == 1 }) {
-            val taken = segmentCandidates.map { it.second }.filter { it.length == 1 }.map { it.first() }
-            segmentCandidates = segmentCandidates.map {
-                if (it.second.length == 1)
-                    it
-                else
-                    it.first to it.second.filter { s -> s !in taken }
-            }
-        }
-        return segmentCandidates.associate { it.second.first() to it.first }
-    }
-
-    fun part2(input: List<String>): Int {
-        val cuesToWanted = input
-            .map { it.split(" | ") }
-            .map { it[0].split(" ") to it[1].split(" ") }
-        return cuesToWanted.sumOf {
-            val segmentTranslation = calculateSegmentTranslation(it.first)
-            decode(it.second, segmentTranslation)
-        }
-    }
 
 // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day08_test")
     check(part1(testInput) == 26)
-    check(part2(testInput) == 61229)
+    check(part2b(testInput) == 61229)
 
     val input = readInput("Day08")
     println(part1(input))
-    println(part2(input))
+    println(part2b(input))
 }
