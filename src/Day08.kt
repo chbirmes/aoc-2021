@@ -6,7 +6,7 @@ fun main() {
         return pairs.sumOf { it.second.count { code -> code.length in setOf(2, 4, 3, 7) } }
     }
 
-    fun part2b(input: List<String>) = input
+    fun part2(input: List<String>) = input
         .map { it.split(" | ") }
         .map { it[0].split(" ") to it[1].split(" ") }
         .sumOf { (allDigits, wantedDigits) ->
@@ -33,15 +33,14 @@ fun main() {
             wantedDigits.map { reverseMapping[it.toSet()] }
                 .joinToString(separator = "")
                 .toInt()
-
         }
 
 // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day08_test")
     check(part1(testInput) == 26)
-    check(part2b(testInput) == 61229)
+    check(part2(testInput) == 61229)
 
     val input = readInput("Day08")
     println(part1(input))
-    println(part2b(input))
+    println(part2(input))
 }
