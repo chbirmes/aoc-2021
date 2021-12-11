@@ -32,7 +32,9 @@ private class OctopusGrid(initialConfiguration: List<String>) {
     var flashCounter: Int = 0
 
     private val octopuses = initialConfiguration.mapIndexed { x, row ->
-        row.mapIndexed { y, char -> Octopus(Position(x, y), char.digitToInt(), this) }
+        row.mapIndexed { y, char ->
+            Octopus(Position(x, y), char.digitToInt(), this)
+        }
     }
 
     private class Octopus(val position: Position, var energy: Int, val grid: OctopusGrid) {
