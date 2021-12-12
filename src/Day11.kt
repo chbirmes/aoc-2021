@@ -77,14 +77,12 @@ private class OctopusGrid(initialConfiguration: List<String>) {
     }
 
     fun tick() {
-        val flatOctopusList = octopuses.flatten()
-        flatOctopusList.forEach { it.energy += 1 }
-        flatOctopusList.filter { it.energy > 9 }
-            .forEach { it.flash() }
-        allFlashed = flatOctopusList.all { it.flashed }
-        flatOctopusList.filter { it.flashed }
-            .forEach { it.reset() }
-
+        with(octopuses.flatten()) {
+            forEach { it.energy += 1 }
+            filter { it.energy > 9 }.forEach { it.flash() }
+            allFlashed = all { it.flashed }
+            filter { it.flashed }.forEach { it.reset() }
+        }
     }
 
     private data class Position(val x: Int, val y: Int)

@@ -1,9 +1,8 @@
 fun main() {
 
-    fun calculateLowPoints(input: List<String>) = input.indices.map { x ->
+    fun calculateLowPoints(input: List<String>) = input.indices.flatMap { x ->
         input.first().indices.map { y -> Point(x, y, input) }
     }
-        .flatten()
         .filter { point ->
             point.neighbors().all {
                 it.value() > point.value()
@@ -13,8 +12,7 @@ fun main() {
     fun part1(input: List<String>) = calculateLowPoints(input).sumOf { it.value() + 1 }
 
     fun Set<Point>.basinNeighbors(visited: Set<Point>) =
-        map { it.neighbors() }
-            .flatten()
+        flatMap { it.neighbors() }
             .filter { it.value() < 9 && it !in visited }
             .toSet()
 
