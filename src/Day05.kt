@@ -15,14 +15,14 @@ fun main() {
 
     fun part1(input: List<String>): Int {
         val lines = input
-            .map { Line(it) }
+            .map { parseLine(it) }
             .filter { it.isHorizontal() || it.isVertical() }
         val grid = gridContaining(lines)
         return grid.count { it.countCovering(lines) >=2 }
     }
 
     fun part2(input: List<String>): Int {
-        val lines = input.map { Line(it) }
+        val lines = input.map { parseLine(it) }
         val grid = gridContaining(lines)
         return grid.count { it.countCovering(lines) >=2 }
     }
@@ -53,7 +53,7 @@ private class Line(private val x1: Int, private val y1: Int, private val x2: Int
     }
 }
 
-private fun Line(string: String) = string.split(",", " -> ")
+private fun parseLine(string: String) = string.split(",", " -> ")
     .map { it.toInt() }
     .let { Line(it[0], it[1], it[2], it[3]) }
 
