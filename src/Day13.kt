@@ -1,14 +1,12 @@
 fun main() {
 
     fun readCoordinates(input: List<String>) = input.takeWhile { it.isNotEmpty() }
-        .map { line -> line.split(",") }
+        .map { it.split(",") }
         .map { it[0].toInt() to it[1].toInt() }
 
     fun readInstructions(input: List<String>) = input.takeLastWhile { it.isNotEmpty() }
-        .map { line ->
-            line.split("=")
-                .let { it[0].last() to it[1].toInt() }
-        }
+        .map { it.split("=") }
+        .map { it[0].last() to it[1].toInt() }
 
     fun part1(input: List<String>): Int {
         val coordinates = readCoordinates(input)
