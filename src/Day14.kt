@@ -1,61 +1,21 @@
 fun main() {
 
-    fun applyRules(s: String, rules: Map<String, Char>): String {
-        val inserts = s.windowed(2)
-            .map { rules[it] ?: '#' }
-            .joinToString(separator = "")
-        val list = s.zip(inserts) { a, b -> a.toString() + b.toString() } + s.last().toString()
-        return list.joinToString(separator = "")
-            .filterNot { it == '#' }
-    }
-
-    fun part1(input: List<String>): Int {
+    fun polymerize(input: List<String>, repetitions:Int): Long {
         val template = input.first()
-        val rules = input.drop(2)
-            .map { it.split(" -> ") }
-            .associate { it[0] to it[1].single() }
-        val finalString = 1.rangeTo(10).fold(template) { acc, _ -> applyRules(acc, rules) }
-        val frequencies = finalString.groupingBy { it }.eachCount().map { it.value }
-        return frequencies.maxOf { it } - frequencies.minOf { it }
-    }
-
-    fun applyBucketRules(pairBuckets: PairBuckets, rules: Map<Pair<Char, Char>, Char>) {
-        val newPairBuckets = PairBuckets()
-        rules.forEach { (pair, newChar) ->
-            val count = pairBuckets.countOf(pair)
-            if (count > 0) {
-                newPairBuckets.add(pair.first to newChar, count)
-                newPairBuckets.add(newChar to pair.second, count)
-                pairBuckets.remove(pair)
-            }
-        }
-        pairBuckets.addBuckets(newPairBuckets)
-    }
-
-    fun part2(input: List<String>): Long {
-        val template = input.first()
-        val rules = input.drop(2)
-            .map { it.split(" -> ") }
-            .associate { it[0].let { lhs -> lhs[0] to lhs[1] } to it[1].single() }
-
-        val pairBuckets = PairBuckets()
-        template.windowed(2).forEach { pairBuckets.add(it[0] to it[1], 1) }
-
-        repeat(40) { applyBucketRules(pairBuckets, rules) }
-
-        val alphabet = pairBuckets.counterMap.keys
-            .flatMap { setOf(it.first, it.second) }
-            .toSet()
-        val charFrequencies = alphabet.associateWith { char ->
-            pairBuckets.counterMap.filterKeys { it.first == char }
-                .values.sum() + if (char == template.last()) 1 else 0
-        }
+        val rules = input.drop(2).map { parseRule(it) }
+        val initialCounts = pairCountsOf(template)
+        val finalCounts = 1.rangeTo(repetitions).fold(initialCounts) { counts, _ -> counts.apply(rules) }
+        val charFrequencies = finalCounts.firstCharFrequencies().addOne(template.last())
         return charFrequencies.maxOf { it.value } - charFrequencies.minOf { it.value }
     }
 
+    fun part1(input: List<String>) = polymerize(input, 10)
+
+    fun part2(input: List<String>) = polymerize(input, 40)
+
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day14_test")
-    check(part1(testInput) == 1588)
+    check(part1(testInput) == 1588L)
     check(part2(testInput) == 2188189693529)
 
     val input = readInput("Day14")
@@ -63,21 +23,44 @@ fun main() {
     println(part2(input))
 }
 
-private data class PairBuckets(val counterMap: MutableMap<Pair<Char, Char>, Long> = mutableMapOf()) {
+private typealias CharPair = Pair<Char, Char>
 
-    fun add(pair: Pair<Char, Char>, count: Long) {
-        counterMap[pair] = countOf(pair) + count
-    }
-
-    fun countOf(pair: Pair<Char, Char>) = counterMap.getOrDefault(pair, 0)
-
-    fun remove(pair: Pair<Char, Char>) {
-        counterMap.remove(pair)
-    }
-
-    fun addBuckets(newPairBuckets: PairBuckets) {
-        newPairBuckets.counterMap.forEach { (pair, count) ->
-            add(pair, count)
-        }
-    }
+private class Rule(val input: CharPair, charToInsert: Char) {
+    val output = CharPair(input.first, charToInsert) to CharPair(charToInsert, input.second)
 }
+
+private fun parseRule(line: String) = line.split(" -> ")
+    .let { Rule(CharPair(it[0][0], it[0][1]), it[1].single()) }
+
+private class PairCounts(private val counterMap: Map<CharPair, Long>) {
+
+    operator fun plus(other: PairCounts) = PairCounts(
+        (counterMap.keys + other.counterMap.keys).associateWith {
+            (counterMap[it] ?: 0) + (other.counterMap[it] ?: 0)
+        }
+    )
+
+    fun apply(rules: List<Rule>): PairCounts {
+        val ruleInputs = rules.map { it.input }.toSet()
+        val (toProcess, toKeep) = counterMap.entries.partition { it.key in ruleInputs }
+        val newCounts = toProcess.map { (pair, count) ->
+            val ruleOutput = rules.single { it.input == pair }.output
+            PairCounts(mapOf(ruleOutput.first to count, ruleOutput.second to count))
+        }
+        return newCounts.fold(PairCounts(toKeep.toMap()), PairCounts::plus)
+    }
+
+    fun firstCharFrequencies() = counterMap.keys.map { it.first }.toSet()
+        .associateWith { char ->
+            counterMap.filterKeys { it.first == char }.values.sum()
+        }
+
+}
+
+private fun pairCountsOf(template: String) = template.windowed(2)
+    .map { PairCounts(mapOf(CharPair(it[0], it[1]) to 1)) }
+    .reduce(PairCounts::plus)
+
+private fun Map<Char, Long>.addOne(char: Char) = filterKeys { it != char } + (char to getOrDefault(char, 0) + 1)
+
+private fun <K, V> List<Map.Entry<K, V>>.toMap() = associate { it.key to it.value }
