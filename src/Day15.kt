@@ -1,6 +1,6 @@
 fun main() {
 
-    fun aStar(costMap: Array<IntArray>): Int {
+    fun dijkstra(costMap: Array<IntArray>): Int {
         val target = costMap.size - 1 to costMap.size - 1
         val open = mutableMapOf((0 to 0) to 0)
         val visited = mutableSetOf<Pair<Int, Int>>()
@@ -38,7 +38,7 @@ fun main() {
                 costMap[x][y] = input[x][y].digitToInt()
             }
         }
-        return aStar(costMap)
+        return dijkstra(costMap)
     }
 
     fun part2(input: List<String>): Int {
@@ -53,7 +53,7 @@ fun main() {
                 }
             }
         }
-        return aStar(costMap)
+        return dijkstra(costMap)
     }
 
     // test if implementation meets criteria from the description, like:
