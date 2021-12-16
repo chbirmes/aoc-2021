@@ -1,62 +1,46 @@
 fun main() {
 
-    fun readPackets(binaryInput: String, maxPackets: Int = Int.MAX_VALUE, cursor: Cursor = Cursor(0)): List<Packet> {
+    fun readPackets(cursor: Cursor, maxPackets: Int = Int.MAX_VALUE): List<Packet> {
         val result = mutableListOf<Packet>()
-        while ((cursor.index + 7 < binaryInput.length) && (result.size < maxPackets)) {
-            val version = binaryInput.substring(cursor.index, cursor.index + 3).toInt(2)
-            cursor.index += 3
-
-            val type = binaryInput.substring(cursor.index, cursor.index + 3).toInt(2)
-            cursor.index += 3
-
-            val packet = if (type == 4) Literal(version) else Operator(version, type)
-            when (packet) {
-                is Literal -> {
-                    val headGroups = binaryInput.substring(cursor.index).chunked(5).takeWhile { it.first() == '1' }
-                    val headGroupsLength = headGroups.size * 5
-                    val tailGroup =
-                        binaryInput.substring(cursor.index + headGroupsLength, cursor.index + 5 + headGroupsLength)
-                    val allGroups = headGroups + tailGroup
-                    packet.number = allGroups.joinToString(separator = "") { it.substring(1) }
+        while ((cursor.remaining() > 7) && (result.size < maxPackets)) {
+            val version = cursor.next(3).toInt(2)
+            val type = cursor.next(3).toInt(2)
+            val packet =
+                if (type == 4) {
+                    val number = cursor.nextLiteralGroups()
+                        .joinToString(separator = "") { it.substring(1) }
                         .toLong(2)
-                    cursor.index += allGroups.size * 5
+                    Literal(version, number)
+                } else {
+                    val subPackets =
+                        if (cursor.nextChar() == '0') {
+                            val bitsInSubPackets = cursor.next(15).toInt(2)
+                            readPackets(cursor.branch(bitsInSubPackets))
+                        } else {
+                            val numberOfSubPackets = cursor.next(11).toInt(2)
+                            readPackets(cursor, maxPackets = numberOfSubPackets)
+                        }
+                    Operator(version, type, subPackets)
                 }
-                is Operator -> {
-                    cursor.index++
-                    if (binaryInput[cursor.index - 1] == '0') {
-                        val bitsInSubPackets = binaryInput.substring(cursor.index, cursor.index + 15).toInt(2)
-                        cursor.index += 15
-                        packet.subPackets =
-                            readPackets(binaryInput.substring(cursor.index, cursor.index + bitsInSubPackets))
-                        cursor.index += bitsInSubPackets
-                    } else {
-                        val numberOfSubPackets = binaryInput.substring(cursor.index, cursor.index + 11).toInt(2)
-                        cursor.index += 11
-                        packet.subPackets = readPackets(binaryInput, maxPackets = numberOfSubPackets, cursor)
-                    }
-                }
-            }
             result.add(packet)
         }
         return result
     }
 
-    fun part1(input: List<String>): Int {
-        val binaryInput = input.first().map {
-            it.digitToInt(16).toString(2).padStart(4, '0')
-        }
+    fun String.hexToBinary() =
+        map { it.digitToInt(16).toString(2).padStart(4, '0') }
             .joinToString(separator = "")
-        return readPackets(binaryInput)
-            .sumOf { it.versionSum() }
+
+    fun part1(input: List<String>): Int {
+        val binaryInput = input.first().hexToBinary()
+        val packets = readPackets(Cursor(binaryInput))
+        return packets.sumOf { it.versionSum() }
     }
 
     fun part2(input: List<String>): Long {
-        val binaryInput = input.first().map {
-            it.digitToInt(16).toString(2).padStart(4, '0')
-        }
-            .joinToString(separator = "")
-        val readPackets = readPackets(binaryInput)
-        return readPackets.single().resolve()
+        val binaryInput = input.first().hexToBinary()
+        val packets = readPackets(Cursor(binaryInput))
+        return packets.single().resolve()
 
     }
 
@@ -70,30 +54,50 @@ fun main() {
     println(part2(input))
 }
 
-private sealed class Packet(open val version: Int) {
-    fun versionSum(): Int = when (this) {
-        is Literal -> version
-        is Operator -> version + subPackets.sumOf { it.versionSum() }
-    }
+private interface Packet {
+    fun versionSum(): Int
+    fun resolve(): Long
+}
 
-    fun resolve(): Long = when (this) {
-        is Literal -> number
-        is Operator -> when (type) {
-            0 -> subPackets.sumOf { it.resolve() }
-            1 -> subPackets.map { it.resolve() }.fold(1L, Long::times)
-            2 -> subPackets.minOf { it.resolve() }
-            3 -> subPackets.maxOf { it.resolve() }
-            5 -> if (subPackets[0].resolve() > subPackets[1].resolve()) 1 else 0
-            6 -> if (subPackets[0].resolve() < subPackets[1].resolve()) 1 else 0
-            7 -> if (subPackets[0].resolve() == subPackets[1].resolve()) 1 else 0
-            else -> throw IllegalStateException()
-        }
+private data class Literal(val version: Int, val number: Long) : Packet {
+    override fun versionSum() = version
+    override fun resolve() = number
+}
+
+private data class Operator(val version: Int, val type: Int, val subPackets: List<Packet>) : Packet {
+
+    override fun versionSum() = version + subPackets.sumOf { it.versionSum() }
+
+    override fun resolve() = when (type) {
+        0 -> subPackets.sumOf { it.resolve() }
+        1 -> subPackets.map { it.resolve() }.fold(1L, Long::times)
+        2 -> subPackets.minOf { it.resolve() }
+        3 -> subPackets.maxOf { it.resolve() }
+        5 -> if (subPackets[0].resolve() > subPackets[1].resolve()) 1 else 0
+        6 -> if (subPackets[0].resolve() < subPackets[1].resolve()) 1 else 0
+        7 -> if (subPackets[0].resolve() == subPackets[1].resolve()) 1 else 0
+        else -> throw IllegalStateException()
     }
 }
 
-private data class Literal(override val version: Int, var number: Long = 0) : Packet(version)
+data class Cursor(val string: String, private var index: Int = 0) {
 
-private data class Operator(override val version: Int, val type: Int, var subPackets: List<Packet> = listOf()) :
-    Packet(version)
+    fun branch(length: Int) = Cursor(next(length))
 
-data class Cursor(var index: Int)
+    fun next(length: Int) = string.substring(index, index + length).also { index += length }
+
+    fun nextChar() = string[index].also { index++ }
+
+    fun remaining() = string.length - index
+
+    fun nextLiteralGroups(): List<String> {
+        val headGroups = string.substring(index).chunked(5).takeWhile { it.first() == '1' }
+        val headGroupsLength = headGroups.size * 5
+        val tailGroup =
+            string.substring(index + headGroupsLength, index + 5 + headGroupsLength)
+        val allGroups = headGroups + tailGroup
+        index += allGroups.size * 5
+        return allGroups
+    }
+
+}
