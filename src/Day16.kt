@@ -93,8 +93,7 @@ data class Cursor(val string: String, private var index: Int = 0) {
     fun nextLiteralGroups(): List<String> {
         val headGroups = string.substring(index).chunked(5).takeWhile { it.first() == '1' }
         val headGroupsLength = headGroups.size * 5
-        val tailGroup =
-            string.substring(index + headGroupsLength, index + 5 + headGroupsLength)
+        val tailGroup = string.substring(index + headGroupsLength, index + 5 + headGroupsLength)
         val allGroups = headGroups + tailGroup
         index += allGroups.size * 5
         return allGroups
