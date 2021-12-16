@@ -1,24 +1,27 @@
 fun main() {
 
-    fun readPackets(cursor: Cursor, maxPackets: Int = Int.MAX_VALUE): List<Packet> {
+    fun readPackets(reader: Reader, maxPackets: Int = Int.MAX_VALUE): List<Packet> {
         val result = mutableListOf<Packet>()
-        while ((cursor.remaining() > 7) && (result.size < maxPackets)) {
-            val version = cursor.next(3).toInt(2)
-            val type = cursor.next(3).toInt(2)
+        while ((reader.remaining() > 7) && (result.size < maxPackets)) {
+            val version = reader.next(3).toInt(2)
+            val type = reader.next(3).toInt(2)
             val packet =
                 if (type == 4) {
-                    val number = cursor.nextLiteralGroups()
-                        .joinToString(separator = "") { it.substring(1) }
-                        .toLong(2)
-                    Literal(version, number)
+                    val number = buildString {
+                        while (reader.nextChar() == '1') {
+                            append(reader.next(4))
+                        }
+                        append(reader.next(4))
+                    }
+                    Literal(version, number.toLong(2))
                 } else {
                     val subPackets =
-                        if (cursor.nextChar() == '0') {
-                            val bitsInSubPackets = cursor.next(15).toInt(2)
-                            readPackets(cursor.branch(bitsInSubPackets))
+                        if (reader.nextChar() == '0') {
+                            val bitsInSubPackets = reader.next(15).toInt(2)
+                            readPackets(reader.branch(bitsInSubPackets))
                         } else {
-                            val numberOfSubPackets = cursor.next(11).toInt(2)
-                            readPackets(cursor, maxPackets = numberOfSubPackets)
+                            val numberOfSubPackets = reader.next(11).toInt(2)
+                            readPackets(reader, maxPackets = numberOfSubPackets)
                         }
                     Operator(version, type, subPackets)
                 }
@@ -31,25 +34,29 @@ fun main() {
         map { it.digitToInt(16).toString(2).padStart(4, '0') }
             .joinToString(separator = "")
 
-    fun part1(input: List<String>): Int {
-        val binaryInput = input.first().hexToBinary()
-        val packets = readPackets(Cursor(binaryInput))
+    fun part1(input: String): Int {
+        val binaryInput = input.hexToBinary()
+        val packets = readPackets(Reader(binaryInput))
         return packets.sumOf { it.versionSum() }
     }
 
-    fun part2(input: List<String>): Long {
-        val binaryInput = input.first().hexToBinary()
-        val packets = readPackets(Cursor(binaryInput))
+    fun part2(input: String): Long {
+        val binaryInput = input.hexToBinary()
+        val packets = readPackets(Reader(binaryInput))
         return packets.single().resolve()
 
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("Day16_test")
-//    check(part1(testInput) == 31)
-    check(part2(testInput) == 1L)
+    testInput.takeWhile { it.isNotEmpty() }.forEach { testCase ->
+        testCase.split(" ").let { check(part1(it[0]) == it[1].toInt()) }
+    }
+    testInput.takeLastWhile { it.isNotEmpty() }.forEach { testCase ->
+        testCase.split(" ").let { check(part2(it[0]) == it[1].toLong()) }
+    }
 
-    val input = readInput("Day16")
+    val input = readInput("Day16").first()
     println(part1(input))
     println(part2(input))
 }
@@ -80,23 +87,16 @@ private data class Operator(val version: Int, val type: Int, val subPackets: Lis
     }
 }
 
-data class Cursor(val string: String, private var index: Int = 0) {
+class Reader(private val string: String) {
 
-    fun branch(length: Int) = Cursor(next(length))
+    private var index: Int = 0
+
+    fun branch(length: Int) = Reader(next(length))
 
     fun next(length: Int) = string.substring(index, index + length).also { index += length }
 
     fun nextChar() = string[index].also { index++ }
 
     fun remaining() = string.length - index
-
-    fun nextLiteralGroups(): List<String> {
-        val headGroups = string.substring(index).chunked(5).takeWhile { it.first() == '1' }
-        val headGroupsLength = headGroups.size * 5
-        val tailGroup = string.substring(index + headGroupsLength, index + 5 + headGroupsLength)
-        val allGroups = headGroups + tailGroup
-        index += allGroups.size * 5
-        return allGroups
-    }
 
 }
