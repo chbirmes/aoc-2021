@@ -22,16 +22,8 @@ fun main() {
     }
 
     fun part2(input: Pair<Int, Int>): Long {
-        var multiverse = Multiverse(
-            mapOf(
-                Universe(input, 0 to 0, true) to 1
-            )
-        )
-        while (!multiverse.finished()) {
-            println("looking at ${multiverse.universeCounts.size} different universes")
-            multiverse = multiverse.evolve()
-        }
-        return max(multiverse.player1WinCount(), multiverse.player2WinCount())
+        val (p1, p2) = GameState(input, 0 to 0, true).winCounts()
+        return max(p1, p2)
     }
 
     // test if implementation meets criteria from the description, like:
@@ -42,63 +34,50 @@ fun main() {
     println(part2(3 to 7))
 }
 
-private data class Universe(val positions: Pair<Int, Int>, val score: Pair<Int, Int>, val player1IsNext: Boolean) {
+private typealias WinCounts = Pair<Long, Long>
+operator fun WinCounts.times(factor: Int) = (first * factor) to (second * factor)
+operator fun WinCounts.plus(other: WinCounts) = (first + other.first) to (second + other.second)
+
+private data class GameState(val positions: Pair<Int, Int>, val score: Pair<Int, Int>, val player1IsNext: Boolean) {
+
+    fun winCounts(): WinCounts {
+        cache[this]?.let { return it }
+        return (
+                if (score.first >= 21)
+                    (1L to 0L)
+                else if (score.second >= 21)
+                    (0L to 1L)
+                else
+                    newStates().fold(0L to 0L) { acc, pair -> acc + pair.first.winCounts() * pair.second }
+                )
+            .also { cache[this] = it }
+    }
+
+    private fun newStates() =
+        listOf(
+            addRollSum(3) to 1,
+            addRollSum(4) to 3,
+            addRollSum(5) to 6,
+            addRollSum(6) to 7,
+            addRollSum(7) to 6,
+            addRollSum(8) to 3,
+            addRollSum(9) to 1
+        )
 
     private fun addToPosition(start: Int, increment: Int) = ((start + increment - 1) % 10) + 1
 
     private fun addRollSum(rollSum: Int) =
         if (player1IsNext) {
             val nextPos1 = addToPosition(positions.first, rollSum)
-            Universe(nextPos1 to positions.second, (score.first + nextPos1) to score.second, false)
+            GameState(nextPos1 to positions.second, (score.first + nextPos1) to score.second, false)
         } else {
             val nextPos2 = addToPosition(positions.second, rollSum)
-            Universe(positions.first to nextPos2, score.first to (score.second + nextPos2), true)
+            GameState(positions.first to nextPos2, score.first to (score.second + nextPos2), true)
         }
 
-    fun evolve(factor: Long) =
-        if (player1HasWon() == null)
-            Multiverse(
-                mapOf(
-                    addRollSum(3) to 1 * factor,
-                    addRollSum(4) to 3 * factor,
-                    addRollSum(5) to 6 * factor,
-                    addRollSum(6) to 7 * factor,
-                    addRollSum(7) to 6 * factor,
-                    addRollSum(8) to 3 * factor,
-                    addRollSum(9) to 1 * factor,
-                )
-            )
-        else
-            Multiverse(mapOf(this to factor))
-
-    fun player1HasWon() =
-        if (score.first >= 21) true
-        else if (score.second >= 21) false
-        else null
-
-}
-
-private class Multiverse(val universeCounts: Map<Universe, Long>) {
-
-    fun evolve() =
-        universeCounts
-            .map { (universe, count) -> universe.evolve(count) }
-            .reduce(Multiverse::plus)
-
-    fun finished() = universeCounts.keys.all { it.player1HasWon() != null }
-
-    fun player1WinCount() = universeCounts.entries.sumOf { (universe, count) ->
-        (if (universe.player1HasWon() == true) 1 else 0) * count
+    companion object {
+        private val cache = mutableMapOf<GameState, WinCounts>()
     }
-
-    fun player2WinCount() = universeCounts.entries.sumOf { (universe, count) ->
-        (if (universe.player1HasWon() == false) 1 else 0) * count
-    }
-
-    private operator fun plus(other: Multiverse) =
-        Multiverse((universeCounts.keys + other.universeCounts.keys).associateWith {
-            universeCounts.getOrDefault(it, 0) + other.universeCounts.getOrDefault(it, 0)
-        })
 
 }
 
