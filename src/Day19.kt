@@ -17,13 +17,13 @@ fun main() {
         return scanners
     }
 
-    fun alignScanners(scanners: List<Scanner>): MutableList<Scanner> {
+    fun alignScanners(scanners: List<Scanner>): List<Scanner> {
         val open = scanners.toMutableList()
         val finished = mutableListOf<Scanner>()
-        val ongoing = mutableListOf(scanners.first().also { open.remove(it) })
-        while (scanners.isNotEmpty()) {
+        val ongoing = mutableListOf(open.first().also { open.remove(it) })
+        while (open.isNotEmpty()) {
             val reference = ongoing.first()
-            val alignMap = scanners.associateWith { reference.align(it) }
+            val alignMap = open.associateWith { reference.align(it) }
             alignMap.forEach { (unaligned, aligned) ->
                 if (aligned != null) {
                     ongoing.add(aligned)
